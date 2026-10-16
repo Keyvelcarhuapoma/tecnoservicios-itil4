@@ -45,6 +45,21 @@ export function SystemArchetypeView({ onNavigate }) {
   const scoreNum = parseFloat(currentScore);
   const isStabilized = scoreNum >= 94.0;
 
+  // Dynamic telemetry metrics synchronized with simulation cycles
+  const dynamicForce = `+${Math.min(52, Math.round(8 + (48 - 8) * (1 - Math.exp(-0.16 * cycleCount))))}%`;
+  const dynamicForceSub = cycleCount < 14 ? 'aceleración activa' : 'vs mes anterior';
+
+  const rawDays = 45 - (45 - 4.2) * (1 - Math.exp(-0.16 * cycleCount));
+  const dynamicDays = `${Math.max(4.2, rawDays).toFixed(1)} días`;
+  const dynamicDaysSub = cycleCount < 14 ? 'comprimiendo latencias...' : 'antes 45 días';
+  const dynamicProgressBarWidth = `${Math.max(15, Math.min(95, 100 - ((Math.max(4.2, rawDays) - 4.2) / 40.8) * 80))}%`;
+
+  const dynamicSilos = `-${Math.min(76, Math.round(12 + (76 - 12) * (1 - Math.exp(-0.16 * cycleCount))))}%`;
+  const dynamicSilosSub = cycleCount < 14 ? 'desarticulando silos...' : 'declive sostenido';
+
+  const dynamicSvsHealth = `${Math.min(99.6, (scoreNum + 1.2)).toFixed(1)}%`;
+  const dynamicSvsSub = isStabilized ? 'Régimen Óptimo' : 'En convergencia...';
+
   // Simulation timer
   useEffect(() => {
     let interval = null;
@@ -444,15 +459,17 @@ export function SystemArchetypeView({ onNavigate }) {
               </div>
 
               <div className="telemetry-value-row">
-                <span className="telemetry-value">
-                  {card.id === 'svs_health' 
-                    ? `${Math.min(99.6, (scoreNum + 1.2)).toFixed(1)}%` 
-                    : card.value}
+                <span className="telemetry-value" style={{ transition: 'all 0.4s ease' }}>
+                  {card.id === 'force' && dynamicForce}
+                  {card.id === 'cycle' && dynamicDays}
+                  {card.id === 'silos_decay' && dynamicSilos}
+                  {card.id === 'svs_health' && dynamicSvsHealth}
                 </span>
                 <span className="telemetry-sub">
-                  {card.id === 'svs_health'
-                    ? (isStabilized ? 'Régimen Óptimo' : 'En convergencia...')
-                    : card.subtext}
+                  {card.id === 'force' && dynamicForceSub}
+                  {card.id === 'cycle' && dynamicDaysSub}
+                  {card.id === 'silos_decay' && dynamicSilosSub}
+                  {card.id === 'svs_health' && dynamicSvsSub}
                 </span>
               </div>
 
@@ -475,7 +492,10 @@ export function SystemArchetypeView({ onNavigate }) {
 
                 {card.type === 'progress' && (
                   <div className="telemetry-bar-track">
-                    <div className="telemetry-bar-fill purple" style={{ width: '85%' }}></div>
+                    <div 
+                      className="telemetry-bar-fill purple" 
+                      style={{ width: dynamicProgressBarWidth, transition: 'width 0.4s ease' }}
+                    ></div>
                   </div>
                 )}
 
@@ -496,11 +516,19 @@ export function SystemArchetypeView({ onNavigate }) {
 
                 {card.type === 'bar-cluster' && (
                   <div className="cluster-bars-row">
-                    <span className="cluster-bar full"></span>
-                    <span className="cluster-bar full"></span>
-                    <span className="cluster-bar full"></span>
-                    <span className="cluster-bar full"></span>
-                    <span className="cluster-bar full"></span>
+                    {[1, 2, 3, 4, 5].map((idx) => {
+                      const isLit = scoreNum >= (55 + idx * 8);
+                      return (
+                        <span 
+                          key={idx} 
+                          className={`cluster-bar ${isLit ? 'full' : ''}`}
+                          style={{ 
+                            backgroundColor: isLit ? '#10b981' : 'var(--border-color)',
+                            transition: 'background-color 0.4s ease'
+                          }}
+                        ></span>
+                      );
+                    })}
                   </div>
                 )}
               </div>
