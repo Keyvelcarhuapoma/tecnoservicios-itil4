@@ -22,17 +22,44 @@ export function PositiveReinforcingLoopView() {
   const { reinforcingView } = SYSTEM_DATA;
   const [isPlaying, setIsPlaying] = useState(true);
   const [activeStep, setActiveStep] = useState(1);
+  const [loopCycle, setLoopCycle] = useState(6);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     let interval = null;
     if (isPlaying) {
       interval = setInterval(() => {
-        setActiveStep((prev) => (prev >= 5 ? 1 : prev + 1));
+        setActiveStep((prev) => {
+          if (prev >= 5) {
+            setLoopCycle((c) => (c >= 99 ? 1 : c + 1));
+            return 1;
+          }
+          return prev + 1;
+        });
       }, 2000);
     }
     return () => clearInterval(interval);
   }, [isPlaying]);
+
+  // Dynamic metrics tied to the active step in the Reinforcing Loop
+  const isMttrActive = activeStep === 3;
+  const mttrValue = (2.4 - (isMttrActive ? 0.3 : 0) + (Math.sin(loopCycle) * 0.08)).toFixed(1) + ' hrs';
+
+  const isCsatActive = activeStep === 4;
+  const csatScore = (4.85 + (isCsatActive ? 0.05 : 0) + (Math.sin(loopCycle * 0.7) * 0.02)).toFixed(2);
+  const csatDashoffset = Math.max(10, Math.min(60, 26 - (parseFloat(csatScore) - 4.85) * 120));
+
+  const isReworkActive = activeStep === 5;
+  const reworkHours = Math.round(1420 + (loopCycle * 3) % 25 + (isReworkActive ? 8 : 0));
+
+  // Executive SVS KPIs
+  const isSlaActive = activeStep === 4;
+  const isChangesActive = activeStep === 2;
+  const isRoiActive = activeStep === 5;
+
+  const slaValue = (99.2 + (isSlaActive ? 0.3 : 0) + (Math.sin(loopCycle) * 0.1)).toFixed(1) + '%';
+  const changesValue = (98.7 + (isChangesActive ? 0.5 : 0) + (Math.sin(loopCycle * 1.3) * 0.1)).toFixed(1) + '%';
+  const roiValue = Math.round(320 + (isRoiActive ? 6 : 0) + (loopCycle % 10)) + '%';
 
   return (
     <div className="view-container animate-fade-in">
@@ -55,11 +82,22 @@ export function PositiveReinforcingLoopView() {
 
         <div className="hero-right-actions">
           <button 
+            className="btn btn-secondary btn-sm"
+            onClick={() => { setActiveStep(1); setLoopCycle(1); }}
+            title="Reiniciar bucle al ciclo 1"
+          >
+            <RotateCw size={14} />
+            Reiniciar Bucle
+          </button>
+          <button 
             className={`btn btn-secondary ${isPlaying ? 'active-sim-btn' : ''}`}
             onClick={() => setIsPlaying(!isPlaying)}
           >
             {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-            Reproducir Simulación R1
+            <span>{isPlaying ? "Simulando Bucle R1" : "Reanudar Simulación"}</span>
+            <span className="cycle-pill" style={{ marginLeft: '6px', padding: '2px 8px', borderRadius: '999px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#059669', fontSize: '11px', fontWeight: 'bold' }}>
+              Ciclo: #{loopCycle} • Paso {activeStep}/5
+            </span>
           </button>
           <button 
             className="btn btn-purple"
@@ -252,12 +290,21 @@ export function PositiveReinforcingLoopView() {
         {/* 3 Comparative Cards */}
         <div className="results-cards-grid">
           {/* Card 1: MTTR */}
-          <div className="result-card card-base">
+          <div 
+            className="result-card card-base"
+            style={{ 
+              transition: 'all 0.4s ease',
+              borderColor: isMttrActive ? '#10b981' : undefined,
+              boxShadow: isMttrActive ? '0 0 16px rgba(16, 185, 129, 0.25)' : undefined
+            }}
+          >
             <div className="result-card-header">
               <div className="result-icon-box bg-red-soft">
                 <Clock size={16} className="text-red" />
               </div>
-              <span className="badge badge-mint">{reinforcingView.transformationResults.cards[0].badge}</span>
+              <span className={`badge ${isMttrActive ? 'badge-purple' : 'badge-mint'}`}>
+                {isMttrActive ? '⚡ Paso 3: Acelerando resolución' : reinforcingView.transformationResults.cards[0].badge}
+              </span>
             </div>
 
             <h3 className="result-card-title">{reinforcingView.transformationResults.cards[0].title}</h3>
@@ -272,7 +319,7 @@ export function PositiveReinforcingLoopView() {
               <div className="comp-row after">
                 <span className="comp-dot green"></span>
                 <span className="comp-lbl">{reinforcingView.transformationResults.cards[0].afterLabel}</span>
-                <strong className="comp-val text-mint">{reinforcingView.transformationResults.cards[0].afterValue}</strong>
+                <strong className="comp-val text-mint" style={{ transition: 'all 0.4s ease' }}>{mttrValue}</strong>
               </div>
               <div className="comp-progress-track">
                 <div className="comp-progress-fill" style={{ width: '91.6%' }}></div>
@@ -286,12 +333,21 @@ export function PositiveReinforcingLoopView() {
           </div>
 
           {/* Card 2: CSAT */}
-          <div className="result-card card-base">
+          <div 
+            className="result-card card-base"
+            style={{ 
+              transition: 'all 0.4s ease',
+              borderColor: isCsatActive ? '#8b5cf6' : undefined,
+              boxShadow: isCsatActive ? '0 0 16px rgba(139, 92, 246, 0.25)' : undefined
+            }}
+          >
             <div className="result-card-header">
               <div className="result-icon-box bg-purple-soft">
                 <Smile size={16} className="text-purple" />
               </div>
-              <span className="badge badge-mint">{reinforcingView.transformationResults.cards[1].badge}</span>
+              <span className={`badge ${isCsatActive ? 'badge-purple' : 'badge-mint'}`}>
+                {isCsatActive ? '⚡ Paso 4: Fidelización Activa' : reinforcingView.transformationResults.cards[1].badge}
+              </span>
             </div>
 
             <h3 className="result-card-title">{reinforcingView.transformationResults.cards[1].title}</h3>
@@ -310,13 +366,14 @@ export function PositiveReinforcingLoopView() {
                     stroke="#10b981" 
                     strokeWidth="6" 
                     strokeDasharray="264"
-                    strokeDashoffset="26" /* 4.85 / 5.0 ~ 97% */
+                    strokeDashoffset={csatDashoffset}
                     strokeLinecap="round"
                     transform="rotate(-90 50 50)"
+                    style={{ transition: 'stroke-dashoffset 0.4s ease' }}
                   />
                 </svg>
                 <div className="csat-circle-content">
-                  <span className="csat-number">{reinforcingView.transformationResults.cards[1].score}</span>
+                  <span className="csat-number" style={{ transition: 'all 0.4s ease' }}>{csatScore}</span>
                   <span className="csat-max">/{reinforcingView.transformationResults.cards[1].maxScore}</span>
                 </div>
               </div>
@@ -330,8 +387,8 @@ export function PositiveReinforcingLoopView() {
                 </div>
                 <div className="csat-comp-item">
                   <span className="csat-state-lbl">Estado Post ITIL 4:</span>
-                  <strong className="csat-state-val text-mint">
-                    {reinforcingView.transformationResults.cards[1].afterValue}
+                  <strong className="csat-state-val text-mint" style={{ transition: 'all 0.4s ease' }}>
+                    {csatScore} / 5.0 (97% Aprobación)
                   </strong>
                 </div>
               </div>
@@ -344,12 +401,21 @@ export function PositiveReinforcingLoopView() {
           </div>
 
           {/* Card 3: Duplicidad y Retrabajo */}
-          <div className="result-card card-base">
+          <div 
+            className="result-card card-base"
+            style={{ 
+              transition: 'all 0.4s ease',
+              borderColor: isReworkActive ? '#10b981' : undefined,
+              boxShadow: isReworkActive ? '0 0 16px rgba(16, 185, 129, 0.25)' : undefined
+            }}
+          >
             <div className="result-card-header">
               <div className="result-icon-box bg-mint-soft">
                 <Zap size={16} className="text-mint" />
               </div>
-              <span className="badge badge-mint">{reinforcingView.transformationResults.cards[2].badge}</span>
+              <span className={`badge ${isReworkActive ? 'badge-purple' : 'badge-mint'}`}>
+                {isReworkActive ? '⚡ Paso 5: Reinversión en Innovación' : reinforcingView.transformationResults.cards[2].badge}
+              </span>
             </div>
 
             <h3 className="result-card-title">{reinforcingView.transformationResults.cards[2].title}</h3>
@@ -358,7 +424,7 @@ export function PositiveReinforcingLoopView() {
             {/* Big Green Card Number */}
             <div className="rework-hero-box">
               <div className="rework-big-stat">
-                <span className="big-stat-number">{reinforcingView.transformationResults.cards[2].heroStat}</span>
+                <span className="big-stat-number" style={{ transition: 'all 0.4s ease' }}>+{reworkHours.toLocaleString()}</span>
                 <span className="big-stat-unit">{reinforcingView.transformationResults.cards[2].heroUnit}</span>
               </div>
               <p className="rework-hero-subtitle">
@@ -407,21 +473,33 @@ export function PositiveReinforcingLoopView() {
         <div className="audit-right-col">
           {/* 3 KPI metric cards */}
           <div className="audit-kpis-grid">
-            {reinforcingView.executiveSummary.kpis.map((kpi, idx) => (
-              <div key={idx} className="audit-kpi-item">
-                <div className="kpi-item-top">
-                  <span className="kpi-item-title">{kpi.title}</span>
-                  <CheckCircle2 size={14} style={{ color: kpi.color }} />
+            {reinforcingView.executiveSummary.kpis.map((kpi, idx) => {
+              const dynamicVal = idx === 0 ? slaValue : idx === 1 ? changesValue : roiValue;
+              const isHighlight = (idx === 0 && isSlaActive) || (idx === 1 && isChangesActive) || (idx === 2 && isRoiActive);
+              return (
+                <div 
+                  key={idx} 
+                  className="audit-kpi-item"
+                  style={{
+                    transition: 'all 0.4s ease',
+                    borderColor: isHighlight ? kpi.color : undefined,
+                    boxShadow: isHighlight ? `0 0 12px ${kpi.color}35` : undefined
+                  }}
+                >
+                  <div className="kpi-item-top">
+                    <span className="kpi-item-title">{kpi.title}</span>
+                    <CheckCircle2 size={14} style={{ color: kpi.color }} />
+                  </div>
+                  <strong className="kpi-item-val" style={{ color: kpi.color, transition: 'all 0.4s ease' }}>
+                    {dynamicVal}
+                  </strong>
+                  <span className="kpi-item-sub">{kpi.subtitle}</span>
+                  <div className="kpi-spark-bar">
+                    <div className="kpi-spark-fill" style={{ backgroundColor: kpi.color, width: '92%' }}></div>
+                  </div>
                 </div>
-                <strong className="kpi-item-val" style={{ color: kpi.color }}>
-                  {kpi.value}
-                </strong>
-                <span className="kpi-item-sub">{kpi.subtitle}</span>
-                <div className="kpi-spark-bar">
-                  <div className="kpi-spark-fill" style={{ backgroundColor: kpi.color, width: '92%' }}></div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Synthesis callout */}
