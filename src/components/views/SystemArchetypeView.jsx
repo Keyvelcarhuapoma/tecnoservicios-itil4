@@ -30,13 +30,28 @@ export function SystemArchetypeView({ onNavigate }) {
   const [cycleCount, setCycleCount] = useState(12);
   const [zoomLevel, setZoomLevel] = useState(1);
 
+  // Dynamic calculation of Stock value based on simulation cycles (asymptotic logistic accumulation)
+  const calculateStockScore = (cycle) => {
+    const base = 56.4; // Post-crisis baseline
+    const target = 97.6;
+    const progress = 1 - Math.exp(-0.16 * Math.max(1, cycle));
+    const raw = base + (target - base) * progress;
+    // Micro-fluctuation once in steady-state (cycle > 18) for live telemetry feel
+    const microVariation = cycle > 18 ? (Math.sin(cycle * 1.3) * 0.25) : 0;
+    return Math.min(99.4, Math.max(54.0, raw + microVariation)).toFixed(1);
+  };
+
+  const currentScore = calculateStockScore(cycleCount);
+  const scoreNum = parseFloat(currentScore);
+  const isStabilized = scoreNum >= 94.0;
+
   // Simulation timer
   useEffect(() => {
     let interval = null;
     if (isSimulating) {
       interval = setInterval(() => {
         setCycleCount((prev) => (prev >= 99 ? 1 : prev + 1));
-      }, 2500);
+      }, 2200);
     }
     return () => clearInterval(interval);
   }, [isSimulating]);
@@ -137,13 +152,25 @@ export function SystemArchetypeView({ onNavigate }) {
               </button>
             </div>
 
+            {/* Reset Simulation Button */}
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setCycleCount(1)}
+              title="Reiniciar Simulación al Ciclo 1"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <RotateCcw size={14} />
+              <span>Reiniciar (Ciclo 1)</span>
+            </button>
+
             {/* Simular Bucle Button */}
             <button
               className={`btn btn-simulate ${isSimulating ? 'simulating' : ''}`}
               onClick={() => setIsSimulating(!isSimulating)}
+              title={isSimulating ? "Pausar simulación" : "Reanudar simulación"}
             >
               {isSimulating ? <Pause size={14} /> : <Play size={14} />}
-              <span>Simular Bucle (R1)</span>
+              <span>{isSimulating ? "Simulando Bucle (R1)" : "Reanudar Simulación"}</span>
               <span className="cycle-pill">Ciclo: {cycleCount}</span>
             </button>
           </div>
@@ -287,13 +314,36 @@ export function SystemArchetypeView({ onNavigate }) {
               {archetypeView.stockCentral.tag}
             </div>
             <h3 className="stock-title">{archetypeView.stockCentral.title}</h3>
-            <div className="stock-score-row">
-              <span className="stock-score">{archetypeView.stockCentral.score}</span>
+            <div className="stock-score-row" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '4px' }}>
+              <span className="stock-score" style={{ transition: 'all 0.4s ease', color: scoreNum >= 90 ? '#4338ca' : '#6366f1' }}>
+                {currentScore}
+              </span>
               <span className="stock-score-max">/{archetypeView.stockCentral.max}</span>
+              <span 
+                className="stock-delta-badge"
+                style={{
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: isStabilized ? '#059669' : '#4f46e5',
+                  backgroundColor: isStabilized ? 'rgba(16, 185, 129, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+                  padding: '2px 7px',
+                  borderRadius: '999px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                  marginLeft: '4px'
+                }}
+              >
+                {isStabilized ? '▲ Estable' : `+${Math.max(0.2, (98 - scoreNum) * 0.12).toFixed(1)}%`}
+              </span>
             </div>
             <div className="stock-badge">
               <Sparkles size={12} className="stock-badge-icon" />
-              <span>{archetypeView.stockCentral.status}</span>
+              <span>
+                {isStabilized 
+                  ? '✔ Bucle R1: Virtuoso y Estable' 
+                  : `⚡ Bucle R1: Acumulando Valor (+${currentScore}%)`}
+              </span>
             </div>
           </div>
 
@@ -394,8 +444,16 @@ export function SystemArchetypeView({ onNavigate }) {
               </div>
 
               <div className="telemetry-value-row">
-                <span className="telemetry-value">{card.value}</span>
-                <span className="telemetry-sub">{card.subtext}</span>
+                <span className="telemetry-value">
+                  {card.id === 'svs_health' 
+                    ? `${Math.min(99.6, (scoreNum + 1.2)).toFixed(1)}%` 
+                    : card.value}
+                </span>
+                <span className="telemetry-sub">
+                  {card.id === 'svs_health'
+                    ? (isStabilized ? 'Régimen Óptimo' : 'En convergencia...')
+                    : card.subtext}
+                </span>
               </div>
 
               {/* Graphical Representation */}
